@@ -1,0 +1,37 @@
+from datetime import datetime
+
+from blog import db
+
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(20), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    image_file = db.Column(db.String(20), nullable=False, default='default.jpg')
+    password = db.Column(db.String(60), nullable=False)
+    
+    # A one to many relationship places a foreign key on the child table referencing the parent. 
+    # relationship() is then specified on the parent, 
+    # as referencing a collection of items represented by the child
+    # https://docs.sqlalchemy.org/en/13/orm/basic_relationships.html
+    # relationships: https://docs.oracle.com/cd/E19798-01/821-1841/bnbqi/index.html
+
+    #runs a query to get posts with user_id = this user id
+    # each post has a ref to the user. 
+    # post.author = this user object
+    posts = db.relationship('Post', backref='author', lazy=True)
+
+    def __repr__(self):
+        return f"User('{self.username}', '{self.email}', '{self.image_file}')"
+
+class Post(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(100), nullable=False)
+    # pass datetime function instead of an instance of the datetime function.
+    # because the instance would return the time at which the model is created
+    date_posted = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    content = db.Column(db.Text, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
+
+    def __repr__(self):
+        return f"User('{self.title}', '{self.date_posted}')"
