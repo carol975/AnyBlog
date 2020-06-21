@@ -2,7 +2,8 @@ from blog import app, db, bcrypt
 from blog.forms import RegistrationForm, LoginForm
 from blog.models import User, Post
 
-from flask import render_template, url_for, flash, redirect
+from flask import render_template, url_for, flash, redirect, request
+from flask_login import login_user, logout_user, current_user, login_required
 from sqlalchemy.exc import SQLAlchemyError
 
 
@@ -35,6 +36,9 @@ def about():
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
+    if current_user.is_authenticated:
+        return redirect(url_for('home'))
+
     form = RegistrationForm()
     # don't have to pass request.form to Flask-WTF; it will load automatically. 
     # validate_on_submit will check if it is a POST request and if it is valid.
@@ -56,13 +60,32 @@ def register():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('home'))
+
     form = LoginForm()
     if form.validate_on_submit():
-        if form.email.data == 'admin@blog.com' and form.password.data == 'password':
-            flash('You are logged in!', 'success')
-            return redirect(url_for('home'))
+        user = User.query.filter_by(email=form.email.data).first()
+        if user and bcrypt.check_password_hash(user.password, form.password.data):
+            login_user(user, remember=form.remember.data)
+
+            next_page = request.args.get('next')
+            #TODO add check for next_page
+            # https://stackoverflow.com/questions/60532973/how-do-i-get-a-is-safe-url-function-to-use-with-flask-and-how-does-it-work
+            return redirect(next_page) if next_page else redirect(url_for('home'))
+
         else:
             flash('Login Failed', 'danger')
 
     return render_template('login.html', title='Login', form=form)
-    
+
+@app.route('/logout')
+def logout():
+    # flask login knows which user is logged in
+    logout_user()
+    return redirect(url_for('home'))
+
+@app.route("/account")
+@login_required
+def account():
+    return render_template('account.html',title='Account')
