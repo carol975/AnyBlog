@@ -1,20 +1,36 @@
 import secrets
 import os
 
-from blog import app, db, bcrypt
-from blog.forms import RegistrationForm, LoginForm, UpdateAccountForm, PostForm
+from blog import app, db, bcrypt, mail
+from blog.forms import (RegistrationForm, LoginForm, 
+                        UpdateAccountForm, PostForm,
+                        RequestResetForm, ResetPasswordForm)
 from blog.models import User, Post
 
 from flask import render_template, url_for, flash, redirect, request, abort
 from flask_login import login_user, logout_user, current_user, login_required
+from flask_mail import Message
+
 from PIL import Image
 from sqlalchemy.exc import SQLAlchemyError
 
 @app.route("/")
 @app.route("/home")
 def home():
-    posts = Post.query.all()
+    page=request.args.get('page', 1, type=int)
+    posts = Post.query.order_by(Post.date_posted.desc()).paginate(per_page=5, page=page )
     return render_template('home.html', posts=posts)
+
+
+@app.route("/user/<string:username>")
+def user_profile(username):
+    page=request.args.get('page', 1, type=int)
+    user = User.query.filter_by(username=str(username)).first_or_404()
+    posts = Post.query.filter_by(author=user).\
+        order_by(Post.date_posted.desc()).\
+        paginate(per_page=5, page=page )
+    return render_template('user_profile.html', posts=posts, user=user)
+
 
 
 @app.route("/about")
@@ -36,11 +52,11 @@ def register():
         
         try:
             db.session.commit()
-            flash(f'Your account has been created! You are now able to log in', 'success')
         except SQLAlchemyError as e:
             #TODO log errors
             flash(f'Sign Up Failed! Please try again', 'danger')
         
+        flash(f'Your account has been created! You are now able to log in', 'success')
         # url_for the name of the function associated with the desired route
         return redirect(url_for('login'))
     return render_template('register.html', title='Register', form=form)
@@ -170,4 +186,62 @@ def delete_post(post_id):
     db.session.commit()
     flash('Your post has been deleted!', 'success')
     return redirect(url_for('home'))
+
+def send_reset_email(user):
+    token = user.get_reset_token()
+    msg = Message('Password Reset Request', 
+                sender='noreply@demo.com', 
+                recipients=[user.email])
+
+    #_external gives absolute url
+    msg.body = f'''
+    To reset your password, visit the following link:
+
+{url_for('reset_token', token=token, _external=True)}
+
+If you did not make this request then simply ignore this email, and no change will be changed
+
+    '''
+    mail.send(msg)
+
+@app.route('/reset_password', methods=['GET', 'POST'])
+def reset_request():
+    if current_user.is_authenticated:
+        return redirect(url_for('home'))
     
+    form = RequestResetForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(email=form.email.data).first()
+        send_reset_email(user)
+        flash('An email has been sent with instructions to reset your password', 'info')
+        return redirect(url_for('login'))
+    return render_template('reset_request.html', title='Reset Password', form=form)
+
+
+@app.route('/reset_password/<string:token>', methods=['GET', 'POST'])
+def reset_token(token):
+    if current_user.is_authenticated:
+        return redirect(url_for('home'))
+    
+    user = User.verify_reset_token(token)
+    if not user:
+        flash('Link has expired', 'warning')
+        return redirect(url_for('reset_request'))
+
+    form = ResetPasswordForm()
+    if form.validate_on_submit():
+        hashed_password = bcrypt.generate_password_hash(form.password.data).decode('utf-8')
+        user.password = hashed_password
+        
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            #TODO log errors
+            flash(f'Password Reset Failed! Please try again', 'danger')
+            return redirect(url_for('reset_request'))
+        
+        flash(f'Your password has been updated! You are now able to log in', 'success')
+        # url_for the name of the function associated with the desired route
+        return redirect(url_for('login'))
+
+    return render_template('reset_password.html', title='Reset Password', form=form)
