@@ -1,5 +1,6 @@
 from datetime import datetime
-from flask import current_app
+from dataclasses import dataclass
+from flask import current_app, json, url_for
 from flask_login import UserMixin 
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer 
 from blog import db, login_manager
@@ -15,6 +16,7 @@ user loader decorator evaluates the following:
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+@dataclass
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(20), unique=True, nullable=False)
@@ -47,8 +49,12 @@ class User(db.Model, UserMixin):
         return User.query.get(user_id) 
 
     def __repr__(self):
-        return f"User('{self.username}', '{self.email}', '{self.image_file}')"
+        return json.dumps({'username': self.username, 'email':self.email, 'profile_image': self.image_file})
+    
+    def serialize(self):
+        return {'username': self.username, 'email':self.email, 'profile_image': self.image_file}
 
+@dataclass
 class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
@@ -56,8 +62,15 @@ class Post(db.Model):
     # because the instance would return the time at which the model is created
     date_posted = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     content = db.Column(db.Text, nullable=False)
+    summary = db.Column(db.Text)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
 
     def __repr__(self):
-        return f"User('{self.title}', '{self.date_posted}')"
+        return json.dumps({'title': self.title, 'content':self.content, 'date_posted': self.date_posted,'author_username': self.author.username, 'author_user_id': self.author.id})
+
+    def serialize(self):
+        return {'post_id':self.id, 'title': self.title, 'content':self.content, 'date_posted': self.date_posted, 'author_username': self.author.username, 'author_user_id': self.author.id, 'author_profile_picture':  url_for('static', filename='profile_pics/' + self.author.image_file)}
+    
+    def serialize_summary(self):
+        return {'post_id':self.id, 'title': self.title, 'summary':self.summary}
