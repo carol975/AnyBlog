@@ -73,4 +73,4 @@ class Post(db.Model):
         return {'post_id':self.id, 'title': self.title, 'content':self.content, 'date_posted': self.date_posted, 'author_username': self.author.username, 'author_user_id': self.author.id, 'author_profile_picture':  url_for('static', filename='profile_pics/' + self.author.image_file)}
     
     def serialize_summary(self):
-        return {'post_id':self.id, 'title': self.title, 'summary':self.summary}
+        return {'post_id':self.id, 'title': self.title, 'summary':self.summary, 'author_user_id':self.author.id}
