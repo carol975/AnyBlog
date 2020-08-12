@@ -9,7 +9,7 @@ from blog.users.utils import save_picture, send_reset_email
 
 from flask import (render_template, url_for, flash,
                    redirect, request, abort, Blueprint,
-                   Response, json)
+                   Response, json, send_from_directory)
 from flask_login import login_user, logout_user, current_user, login_required
 
 from sqlalchemy.exc import SQLAlchemyError
@@ -88,17 +88,14 @@ def account():
             return Response(status=200)
 
     elif request.method == 'GET':
-        # sessions :https://docs.sqlalchemy.org/en/13/orm/session_basics.html#session-faq-whentocreate
-        profile_image_url = url_for(
-            'static', filename='profile_pics/' + current_user.image_file, _external=True)
-        data = {
-            'username': current_user.username,
-            'email': current_user.email,
-            'profile_image_url': profile_image_url
-        }
-        return Response(status=200)
+        return Response(json.dumps({'user_info': current_user.to_json()}), status=200)
 
     return Response(status=400)
+
+@users.route("/image/<string:image_name>")
+def get_image(image_name):
+    print(image_name)
+    return send_from_directory('static/profile_pics/',  image_name, as_attachment=True)
 
 
 @users.route("/user/<string:username>")
@@ -112,9 +109,9 @@ def user_profile(username):
         order_by(Post.date_posted.desc()).\
         paginate(per_page=5, page=page)
 
-    items = [post.serialize_summary() for post in posts.items]
+    items = [post.to_json_summary() for post in posts.items]
     data = {
-        'user_info': user.serialize(),
+        'user_info': user.to_json(),
         'posts': {
             'items': items,
             'curr_page': posts.page,
@@ -160,8 +157,8 @@ def reset_token(token):
                 # TODO log errors
                 return Response(status=500)
 
-            flash(
-                f'Your password has been updated! You are now able to log in', 'success')
+            # flash(
+                # f'Your password has been updated! You are now able to log in', 'success')
             # url_for the name of the function associated with the desired route
             return Response(status=200)
 

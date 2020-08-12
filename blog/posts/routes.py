@@ -31,7 +31,7 @@ def new_post():
 
 @posts.route('/post/<int:post_id>', methods=['GET'])
 def get_post(post_id):
-    post = Post.query.get(post_id).serialize()
+    post = Post.query.get(post_id).to_json()
     if current_user and current_user.id == post['author_user_id']:
         post['is_curr_user'] = True
     else:

@@ -51,8 +51,9 @@ class User(db.Model, UserMixin):
     def __repr__(self):
         return json.dumps({'username': self.username, 'email':self.email, 'profile_image': self.image_file})
     
-    def serialize(self):
-        return {'username': self.username, 'email':self.email, 'profile_image': self.image_file}
+    def to_json(self):
+        return {'username': self.username, 'email':self.email, 
+            'profile_image': url_for('users.get_image', image_name=self.image_file)}
 
 @dataclass
 class Post(db.Model):
@@ -69,8 +70,8 @@ class Post(db.Model):
     def __repr__(self):
         return json.dumps({'title': self.title, 'content':self.content, 'date_posted': self.date_posted,'author_username': self.author.username, 'author_user_id': self.author.id})
 
-    def serialize(self):
+    def to_json(self):
         return {'post_id':self.id, 'title': self.title, 'content':self.content, 'date_posted': self.date_posted, 'author_username': self.author.username, 'author_user_id': self.author.id, 'author_profile_picture':  url_for('static', filename='profile_pics/' + self.author.image_file)}
     
-    def serialize_summary(self):
+    def to_json_summary(self):
         return {'post_id':self.id, 'title': self.title, 'summary':self.summary, 'author_user_id':self.author.id}

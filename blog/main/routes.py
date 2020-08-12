@@ -12,7 +12,7 @@ def feed_posts():
     posts = Post.query.order_by(Post.date_posted.desc()).paginate(per_page=5, page=page)
     items = []
     for post in posts.items:
-        p = post.serialize_summary()
+        p = post.to_json_summary()
         print(current_user.id, p.get('author_user_id'))
         if current_user and current_user.id == p.get('author_user_id'):
             p['is_curr_user'] = True
