@@ -10,8 +10,7 @@ class RegistrationForm(FlaskForm):
                            DataRequired(), Length(min=2, max=20)])
     email = StringField('Email', validators=[DataRequired(), Email()])
     password = PasswordField('Password', validators=[DataRequired()])    
-    confirm_password = PasswordField('Confirm Password', validators=[DataRequired(), EqualTo('password')])
-    submit = SubmitField('Sign Up')
+    confirm_password = PasswordField('ConfirmPassword', validators=[DataRequired(), EqualTo('password')])
 
     # Custom WTF validators: https://stackoverflow.com/questions/50327174/custom-validators-in-wtforms-using-flask
     def validate_username(self, username):

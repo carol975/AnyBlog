@@ -114,8 +114,7 @@ def user_profile(username):
         'user_info': user.to_json(),
         'posts': {
             'items': items,
-            'curr_page': posts.page,
-            'total_page': posts.pages
+            'total_items':posts.total
         }
     }
     return Response(json.dumps(data), status=200)

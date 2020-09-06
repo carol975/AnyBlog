@@ -9,12 +9,13 @@ main = Blueprint('main', __name__)
 @main.route("/home/feed")
 def feed_posts():
     page=request.args.get('page', 1, type=int)
-    posts = Post.query.order_by(Post.date_posted.desc()).paginate(per_page=5, page=page)
+    per_page = request.args.get('per_page', 5, type=int)
+    print(page)
+    posts = Post.query.order_by(Post.date_posted.desc()).paginate(per_page=per_page, page=page)
     items = []
     for post in posts.items:
         p = post.to_json_summary()
-        print(current_user.id, p.get('author_user_id'))
-        if current_user and current_user.id == p.get('author_user_id'):
+        if current_user.is_authenticated and current_user.id == p.get('author_user_id'):
             p['is_curr_user'] = True
         else:
             p['is_curr_user'] = False
@@ -22,13 +23,18 @@ def feed_posts():
     
     data = {
         'items': items,
-        'curr_page': posts.page,
-        'total_page': posts.pages
+        'total_items': posts.total
 
     }
     return Response(json.dumps(data))
 
+@main.route('/home/following')
+def get_following_posts():
+    pass
 
+@main.route('/home/trending')
+def get_trending_posts():
+    pass
 
 @main.route("/about")
 def about():
